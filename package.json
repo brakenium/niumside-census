@@ -1,0 +1,30 @@
+{
+  "name": "niumside-bun",
+  "module": "index.ts",
+  "type": "module",
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "bun-types": "latest",
+    "kysely-codegen": "^0.11.0",
+    "pg": "^8.11.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dbgen": "bun x kysely-codegen --out-file src/db/db.d.ts "
+  },
+  "dependencies": {
+    "bufferutil": "^4.0.8",
+    "postgres": "^3.4.3",
+    "ps2census": "^4.6.0",
+    "utf-8-validate": "^6.0.3",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  }
+}
