@@ -1,4 +1,3 @@
-// db.js
 import postgres from 'postgres'
 import { Config } from 'src/config';
 

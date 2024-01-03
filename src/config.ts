@@ -20,7 +20,7 @@ export class Config {
 	public static readonly LogLevel: LogLevel = Config.getEnumFromConfig('LOG_LEVEL', LogLevel, LogLevel.INFO);
 	public static readonly LogToConsole: boolean = Config.getTypeFromConfig('LOG_TO_CONSOLE', true);
 	public static readonly LogToFile: boolean = Config.getTypeFromConfig('LOG_TO_FILE', false);
-	public static readonly DatabaseUrl: URL = Config.exitOnDefaultValue('DATABASE_URL', (key, defaultValue) => Config.getClassInstanceFromConfig(key, defaultValue, URL), new URL(`postgres://postgres:${defaultConfig}@localhost:5432/postgres`));
+	public static readonly DatabaseUrl: string = Config.exitOnDefaultValue('DATABASE_URL', Config.getTypeFromConfig, defaultConfig);
 
 	private static exitOnDefaultValue<T, U>(
 		key: string,

@@ -1,3 +1,4 @@
+import "./db/migrations";
 import { eventStore } from './census/stream.js';
 import { logger } from './logger.js';
 import { PopulationTracker } from './services/popTracker.js';

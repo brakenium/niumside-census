@@ -2,14 +2,21 @@
 -- Please log an issue at https://redmine.postgresql.org/projects/pgadmin4/issues/new if you find any bugs, including reproduction steps.
 BEGIN;
 
+CREATE TABLE IF NOT EXISTS public.population
+(
+	population_id serial,
+	"timestamp" timestamp without time zone NOT NULL DEFAULT NOW(),
+	CONSTRAINT "PK_population" PRIMARY KEY (population_id),
+	CONSTRAINT "AK_Unique_Timestamp" UNIQUE ("timestamp")
+);
 
 CREATE TABLE IF NOT EXISTS public.world_population
 (
     world_id integer NOT NULL,
-    "timestamp" timestamp without time zone NOT NULL DEFAULT NOW(),
-    population_id serial,
-    CONSTRAINT "PK_world_population" PRIMARY KEY (population_id),
-    CONSTRAINT "AK_Unique_TimestampAndWorld" UNIQUE ("timestamp", world_id)
+	population_id integer NOT NULL,
+    world_population_id serial,
+    CONSTRAINT "PK_world_population" PRIMARY KEY (world_population_id),
+	CONSTRAINT "AK_UQ_population_world" UNIQUE (world_id, population_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.zone_population
@@ -90,7 +97,7 @@ CREATE TABLE IF NOT EXISTS public.world
     world_id integer NOT NULL,
     name character varying,
     description character varying,
-    last_update timestamp without time zone NOT NULL DEFAULT NOW(),
+    last_update timestamp without time zone,
     CONSTRAINT "PK_world" PRIMARY KEY (world_id)
 );
 
@@ -104,6 +111,13 @@ CREATE TABLE IF NOT EXISTS public.loadout
 );
 
 ALTER TABLE IF EXISTS public.world_population
+	ADD CONSTRAINT "FK_world_population_population" FOREIGN KEY (population_id)
+		REFERENCES public.population (population_id) MATCH SIMPLE
+		ON UPDATE NO ACTION
+		ON DELETE NO ACTION
+		NOT VALID;
+
+ALTER TABLE IF EXISTS public.world_population
     ADD CONSTRAINT "FK_world_population_world" FOREIGN KEY (world_id)
         REFERENCES public.world (world_id) MATCH SIMPLE
         ON UPDATE NO ACTION
@@ -113,7 +127,7 @@ ALTER TABLE IF EXISTS public.world_population
 
 ALTER TABLE IF EXISTS public.zone_population
     ADD CONSTRAINT "FK_zone_population_world_population" FOREIGN KEY (world_population_id)
-        REFERENCES public.world_population (population_id) MATCH SIMPLE
+        REFERENCES public.world_population (world_population_id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
         NOT VALID;

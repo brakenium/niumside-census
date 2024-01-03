@@ -17,6 +17,23 @@
 		"noImplicitAny": false,
 		"strictBindCallApply": true,
 		"forceConsistentCasingInFileNames": true,
-		"noFallthroughCasesInSwitch": true
+		"noFallthroughCasesInSwitch": true,
+		"target": "ES2022",
+		"module": "esnext",
+		"moduleResolution": "node",
+	},
+	"ts-node": {
+		"experimentalSpecifierResolution": "node",
+		"require": [
+			"dotenv/config"
+		],
+		"typeCheck": false,
+		"files": true,
+		"esm": true,
+		"ignore": [
+			"(?:^|/)node_modules/",
+			"(?:^|/)\\.next/",
+			".yarn/*",
+		]
 	}
 }

@@ -47,6 +47,11 @@ export interface Outfit {
   outfit_id: number;
 }
 
+export interface Population {
+  population_id: Generated<number>;
+  timestamp: Generated<Timestamp>;
+}
+
 export interface TeamPopulation {
   team_id: number;
   team_population_id: Generated<number>;
@@ -61,9 +66,9 @@ export interface World {
 }
 
 export interface WorldPopulation {
-  population_id: Generated<number>;
-  timestamp: Generated<Timestamp>;
+  population_id: number;
   world_id: number;
+  world_population_id: Generated<number>;
 }
 
 export interface Zone {
@@ -86,6 +91,7 @@ export interface DB {
   loadout: Loadout;
   loadout_population: LoadoutPopulation;
   outfit: Outfit;
+  population: Population;
   team_population: TeamPopulation;
   world: World;
   world_population: WorldPopulation;
