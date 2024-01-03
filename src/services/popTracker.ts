@@ -25,7 +25,8 @@ interface DbIdWithTree<T extends WorldMap | ZoneMap | TeamMap | LoadoutMap> {
 export const PopulationTracker: IServiceConstructor = class PopulationTracker implements IService {
 	private EventProcessingintervalId: NodeJS.Timeout;
 	private CharacterProcessingintervalId: NodeJS.Timeout;
-	private characters: TempStore<string, StoredCharacter> = new TempStore();
+	// Temporary storage for 2 minutes
+	private characters: TempStore<string, StoredCharacter> = new TempStore(120_000);
 	private logger: Logger;
 	private eventStore: EventStore;
 	private static readonly eventsStoreConsumerName = 'PopulationTracker';
@@ -42,30 +43,25 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 
 		this.EventProcessingintervalId = setInterval(() => this.processEvents(), 1000);
 		this.CharacterProcessingintervalId = setInterval(async () => {
-			await sql.begin(async transaction => {
+			await sql.begin(async sql => {
 
-				const population_insert = await transaction<Population[]>`
+				const population_insert = await sql`
 					INSERT INTO population DEFAULT VALUES
 					RETURNING population_id
 				`;
 
 				this.logger.debug(`Created population report ${population_insert[0].population_id}`);
 
-				const pop_report_id = population_insert[0].population_id;
-				try {
-					this.processCharacters(pop_report_id, transaction);
-				}
-				catch (e) {
-					transaction`ROLLBACK AND CHAIN`;
-					throw e;
-				}
+				const pop_report_id: number = population_insert[0].population_id;
+
+				this.processCharacters(pop_report_id, sql);
 			});
 		}, 10000);
 	}
 
 	processEvents() {
 		const events: EventStoreEvent<PS2Events.GainExperience>[] = this.eventStore.stores.GainExperience.consumeEvents(PopulationTracker.eventsStoreConsumerName);
-		this.logger.debug(`Received events: ${events.length}`);
+		this.logger.silly(`Received events: ${events.length}`);
 
 		for (const event of events) {
 			this.characters.set(event.raw.character_id, {
@@ -80,8 +76,6 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 
 	private async insertPopulation(populationType: string, id: IntermediaryPopulationDetailLevelIdentifier, parentId: number, parentType: string, populationIds: IntermediaryPopulationMapLevel, sql: any) {
 		if (!populationIds.has(id)) {
-			this.logger.debug(`Inserting ${populationType} ${id} with ${parentType + '_id'} ${parentId} into DB`);
-
 			// populationType.split('_')[0] is the name of the table including all possible values for the DetailLevelIdentifier
 			// e.g. 'loadout' for 'loadout_population'
 			//
@@ -93,32 +87,36 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 			const parentType_id_column_name = parentType + '_id';
 			const detailLevel = populationType.split('_')[0];
 			// E.g. 'world_id' for 'world_population'
-			const detailLevel_column_name = detailLevel + '_id';
+
+			let detailLevel_parent_name;
+			if (detailLevel === 'team') detailLevel_parent_name = 'faction';
+
+			const parent_table_name = detailLevel_parent_name || detailLevel;
+
+			await sql`
+				INSERT INTO ${sql(parent_table_name)}
+				(
+					${sql(parent_table_name + '_id')}
+				)
+				VALUES (
+					${id}
+				)
+				ON CONFLICT DO NOTHING
+			`;
 
 			const insert = await sql`
-				WITH detail_insert AS (
-					INSERT INTO ${sql(detailLevel)}
-					(
-						${sql(detailLevel_column_name)}
-					)
-					VALUES (
-						${id}
-					)
-					ON CONFLICT DO NOTHING
-					RETURNING ${sql(detailLevel_column_name)}
-				)
 				INSERT INTO ${sql(populationType)}
 				(
 					${sql(parentType_id_column_name)},
-					${sql(detailLevel_column_name)}
+					${sql(detailLevel + '_id')}
 				)
-				SELECT
+				VALUES (
 					${parentId},
-					detail_insert.${sql(detailLevel_column_name)}
-				FROM detail_insert
-				RETURNING *
+					${id}
+				)
+				RETURNING ${sql(populationType + '_id')}
 			`;
-			sql`COMMIT AND CHAIN`;
+
 			populationIds.set(id, {
 				db_id: insert[0][populationType + '_id'],
 				map: new Map()
@@ -127,7 +125,7 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 	}
 
 	// TODO: Process this.characters into population reports in DB
-	async processCharacters(pop_report_id: number, transaction: any) {
+	async processCharacters(pop_report_id: number, sql: any) {
 		const characters = this.characters.getMap();
 		this.logger.debug(`Processing ${characters.size} characters`);
 
@@ -139,7 +137,7 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 			const teamId = Number(character.value.teamId);
 			const loadoutId = Number(character.value.loadoutId);
 
-			await this.insertPopulation('world_population', worldId, pop_report_id, 'population', population_ids, transaction);
+			await this.insertPopulation('world_population', worldId, pop_report_id, 'population', population_ids, sql);
 
 			const world_db_id = population_ids.get(worldId)?.db_id;
 			const world_db_map = population_ids.get(worldId)?.map;
@@ -147,7 +145,7 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 			if (!world_db_id || !world_db_map) {
 				this.logger.error(`World ${worldId} not found in population_ids/DB`);
 				new Error(`World ${worldId} not found in population_ids/DB`);
-				transaction`ROLLBACK AND CHAIN`;
+				sql`ROLLBACK AND CHAIN`;
 				return;
 			}
 
@@ -158,7 +156,7 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 					world_db_id,
 					'world_population',
 					world_db_map,
-					transaction
+					sql
 				);
 			}
 
@@ -167,7 +165,7 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 
 			if (!zone_db_id || !zone_db_map) {
 				this.logger.error(`Zone ${zoneId} not found in population_ids/DB`);
-				transaction`ROLLBACK AND CHAIN`;
+				sql`ROLLBACK AND CHAIN`;
 				return;
 			}
 
@@ -178,7 +176,7 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 					zone_db_id,
 					'zone_population',
 					zone_db_map,
-					transaction
+					sql
 				);
 			}
 
@@ -187,7 +185,7 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 
 			if (!team_db_id || !team_db_map) {
 				this.logger.error(`Team ${teamId} not found in population_ids/DB`);
-				transaction`ROLLBACK AND CHAIN`;
+				sql`ROLLBACK AND CHAIN`;
 				return;
 			}
 
@@ -195,7 +193,7 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 			const loadout_map = population_ids.get(worldId)?.map.get(zoneId)?.map.get(teamId)?.map;
 			if (!loadout_map) {
 				this.logger.error(`Loadout ${loadoutId} not found in population_ids/DB`);
-				transaction`ROLLBACK AND CHAIN`;
+				sql`ROLLBACK AND CHAIN`;
 				return;
 			}
 
@@ -210,12 +208,23 @@ export const PopulationTracker: IServiceConstructor = class PopulationTracker im
 			for (const [zoneId, zone] of world.map) {
 				for (const [teamId, team] of zone.map) {
 					for (const [loadoutId, amount] of team.map) {
-						await transaction<Population[]>`
+						await sql`
+							INSERT INTO loadout (
+								loadout_id
+							)
+							VALUES (
+								${loadoutId}
+							)
+							ON CONFLICT DO NOTHING
+						`;
+
+						await sql`
 							INSERT INTO loadout_population (
 								loadout_id,
 								team_population_id,
 								amount
-							) VALUES (
+							)
+							VALUES (
 								${loadoutId},
 								${team.db_id},
 								${amount}

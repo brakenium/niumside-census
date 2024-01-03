@@ -1,15 +1,17 @@
 export class TempStore<KEY, VALUE> {
   private store: Map<KEY, { value: VALUE, timeoutId: NodeJS.Timeout }>;
+  private ttl: number;
 
-  constructor() {
+  constructor(ttl: number) {
     this.store = new Map();
+	this.ttl = ttl;
   }
 
-  set(key: KEY, value: VALUE, ttl: number = 300) {
+  set(key: KEY, value: VALUE) {
     if (this.store.has(key)) {
       clearTimeout(this.store.get(key)!.timeoutId);
     }
-    const timeoutId = setTimeout(() => this.store.delete(key), ttl * 1000);
+    const timeoutId = setTimeout(() => this.store.delete(key), this.ttl);
     this.store.set(key, { value, timeoutId });
   }
 
@@ -22,10 +24,10 @@ export class TempStore<KEY, VALUE> {
 	return this.store;
   }
 
-  resetTTL(key: KEY, ttl: number = 300) {
+  resetTTL(key: KEY) {
     if (this.store.has(key)) {
       clearTimeout(this.store.get(key)!.timeoutId);
-      const timeoutId = setTimeout(() => this.store.delete(key), ttl * 1000);
+      const timeoutId = setTimeout(() => this.store.delete(key), this.ttl);
       const value = this.store.get(key)!.value;
       this.store.set(key, { value, timeoutId });
     }
