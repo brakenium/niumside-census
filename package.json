@@ -10,7 +10,6 @@
     "@types/ws": "^8.5.10",
     "bun-types": "latest",
     "kysely-codegen": "^0.11.0",
-    "pg": "^8.11.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
@@ -21,11 +20,12 @@
     "start": "bun run src/index.ts",
     "debug": "bun run --inspect=ws://localhost:6499/niumside-bun src/index.ts",
     "dbgen": "bun x kysely-codegen --out-file src/db/db.d.ts ",
-	"knex": "NODE_OPTIONS='--loader ts-node/esm' ./node_modules/.bin/knex --knexfile src/db/knexfile.ts"
+    "knex": "NODE_OPTIONS='--loader ts-node/esm' ./node_modules/.bin/knex --knexfile src/db/knexfile.ts"
   },
   "dependencies": {
     "bufferutil": "^4.0.8",
     "knex": "^3.1.0",
+    "pg": "^8.11.3",
     "postgres": "^3.4.3",
     "ps2census": "^4.6.0",
     "utf-8-validate": "^6.0.3",

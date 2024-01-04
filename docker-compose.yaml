@@ -10,6 +10,19 @@ services:
     environment:
       POSTGRES_DB: niumside
       POSTGRES_PASSWORD: P@ssw0rd
+  
+  niumside-census:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    depends_on:
+      - db
+    environment:
+      CENSUS_SERVICE_ID: ${CENSUS_SERVICE_ID}
+      CENSUS_WORLDS: ${CENSUS_WORLDS}
+      LOG_LEVEL: ${LOG_LEVEL}
+      DATABASE_URL: postgres://postgres:P@ssw0rd@db:5432/niumside
+    restart: always
 
   pgadmin:
     ports:
