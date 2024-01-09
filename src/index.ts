@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import "./db/migrations";
 import { eventStore } from './census/stream.js';
 import { logger } from './logger.js';

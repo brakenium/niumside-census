@@ -20,7 +20,7 @@
     "start": "bun run src/index.ts",
     "debug": "bun run --inspect=ws://localhost:6499/niumside-bun src/index.ts",
     "dbgen": "bun x kysely-codegen --out-file src/db/db.d.ts ",
-    "knex": "NODE_OPTIONS='--loader ts-node/esm' ./node_modules/.bin/knex --knexfile src/db/knexfile.ts"
+    "knex": "NODE_OPTIONS='--loader ts-node/esm' bun x knex --knexfile src/db/knexfile.ts"
   },
   "dependencies": {
     "bufferutil": "^4.0.8",

@@ -13,13 +13,13 @@ export enum LogLevel {
 const defaultConfig = "35*Ag%&Ho7x%yT9wWoSYbXPT&4ye9z*WKPs!gFB9nRwaaB$2KKntoXhkxS$ESL!MfUataJMLMUb9dA9swk%N3!#zxENDNCKnQEnG%tbp@Zm!%J245WmL^y4%$2sEDNMU";
 
 export class Config {
-	public static readonly CensusServiceId: string = Config.exitOnDefaultValue('CENSUS_SERVICE_ID', Config.getTypeFromConfig, defaultConfig);
+	public static readonly CensusServiceId: string = Config.exitOnDefaultValue('CENSUS_SERVICE_ID', Config.getString, defaultConfig);
 	public static readonly CensusStreamUrl: URL = Config.getClassInstanceFromConfig('CENSUS_STREAM_URL', new URL('wss://push.nanite-systems.net/streaming'), URL);
 	public static readonly CensusWorlds: string[] = Config.exitOnDefaultValue('CENSUS_WORLDS', Config.getListFromConfig, [defaultConfig]);
 	public static readonly CensusEnvironment: PS2Environment = Config.getTypeFromConfig('CENSUS_ENVIRONMENT', 'ps2' as PS2Environment);
 	public static readonly LogLevel: LogLevel = Config.getEnumFromConfig('LOG_LEVEL', LogLevel, LogLevel.INFO);
 	public static readonly LogToConsole: boolean = Config.getTypeFromConfig('LOG_TO_CONSOLE', true);
-	public static readonly LogToFile: boolean = Config.getTypeFromConfig('LOG_TO_FILE', false);
+	public static readonly LogToFile: boolean = Config.parseTypeFromConfig('LOG_TO_FILE', false, (value) => value === 'true');
 	public static readonly DatabaseUrl: string = Config.exitOnDefaultValue('DATABASE_URL', Config.getTypeFromConfig, defaultConfig);
 
 	private static exitOnDefaultValue<T, U>(
@@ -34,6 +34,10 @@ export class Config {
 			console.log(`Please set a value for config key: ${key}`)
 			process.exit(1);
 		}
+	}
+
+	private static getString(key: string, defaultValue: string): string {
+		return Config.parseTypeFromConfig(key, defaultValue, (value) => value)
 	}
 
 	private static getListFromConfig<T>(key: string, defaultValue: T[]): T[] {
@@ -60,6 +64,22 @@ export class Config {
 				process.exit(1);
 			}
 		} else {
+			return defaultValue;
+		}
+	}
+
+	private static parseTypeFromConfig<T>(key: string, defaultValue: T, parseFunction: (value: string) => T): T {
+		let value = process.env[key];
+
+		if (value) {
+			try {
+				return parseFunction(value);
+			} catch (error) {
+				console.error(`Invalid value for config key ${key}: ${value}`);
+				process.exit(1);
+			}
+		}
+		else {
 			return defaultValue;
 		}
 	}
